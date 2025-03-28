@@ -51,6 +51,10 @@ h1 {
     padding: 0.5rem 1rem;
     border: none;
     border-bottom: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 0.5rem;
 }
 
 .nav-tabs .nav-link.active {
@@ -58,6 +62,17 @@ h1 {
     font-weight: 700;
     border-bottom: 2px solid #0d6efd;
     background-color: transparent;
+}
+
+.nav-tabs .btn-close {
+    padding: 0.5rem;
+    margin: -0.5rem;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.nav-tabs .btn-close:hover {
+    opacity: 1;
 }
 
 .song-list {

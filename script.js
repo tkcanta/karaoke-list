@@ -398,13 +398,28 @@ function createCategoryTab(category) {
     tabButton.setAttribute('data-bs-target', `#${category.id}`);
     tabButton.setAttribute('type', 'button');
     tabButton.setAttribute('role', 'tab');
-    tabButton.textContent = category.name;
+    
+    // タブボタンのコンテンツを作成
+    const tabContent = document.createElement('span');
+    tabContent.textContent = category.name;
+    tabButton.appendChild(tabContent);
+    
+    // 削除ボタンの作成
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'btn-close ms-2';
+    deleteButton.setAttribute('type', 'button');
+    deleteButton.setAttribute('aria-label', 'カテゴリを削除');
+    deleteButton.onclick = (e) => {
+        e.stopPropagation(); // タブの切り替えを防止
+        deleteCustomCategory(category.id);
+    };
+    tabButton.appendChild(deleteButton);
     
     // タブコンテンツの作成
-    const tabContent = document.createElement('div');
-    tabContent.className = 'tab-pane fade';
-    tabContent.id = category.id;
-    tabContent.setAttribute('role', 'tabpanel');
+    const tabContentContainer = document.createElement('div');
+    tabContentContainer.className = 'tab-pane fade';
+    tabContentContainer.id = category.id;
+    tabContentContainer.setAttribute('role', 'tabpanel');
     
     // 曲リスト用のコンテナの作成
     const songListContainer = document.createElement('div');
@@ -413,7 +428,7 @@ function createCategoryTab(category) {
     
     // 要素の追加
     tabItem.appendChild(tabButton);
-    tabContent.appendChild(songListContainer);
+    tabContentContainer.appendChild(songListContainer);
     
     // お気に入りタブの後に新しいタブを挿入
     const favoritesTab = document.getElementById('favorites-tab');
@@ -431,7 +446,7 @@ function createCategoryTab(category) {
     }
     
     // タブコンテンツの追加
-    contentContainer.appendChild(tabContent);
+    contentContainer.appendChild(tabContentContainer);
 }
 
 // カスタムカテゴリのセレクトオプションを追加する関数
@@ -502,6 +517,49 @@ function initializeCustomCategories() {
             songs[category.id] = [];
         }
     });
+}
+
+// カスタムカテゴリを削除する関数
+function deleteCustomCategory(categoryId) {
+    if (confirm('このカテゴリを削除してもよろしいですか？\nカテゴリ内の曲もすべて削除されます。')) {
+        // カスタムカテゴリリストから削除
+        customCategories = customCategories.filter(cat => cat.id !== categoryId);
+        
+        // songs オブジェクトから削除
+        delete songs[categoryId];
+        
+        // セレクトボックスから削除
+        const option = document.querySelector(`#categorySelect option[value="${categoryId}"]`);
+        if (option) {
+            option.remove();
+        }
+        
+        // タブを削除
+        const tab = document.querySelector(`#songTabs [data-category-id="${categoryId}"]`);
+        if (tab) {
+            tab.remove();
+        }
+        
+        // タブコンテンツを削除
+        const content = document.getElementById(categoryId);
+        if (content) {
+            content.remove();
+        }
+        
+        // ローカルストレージに保存
+        saveCategoriesToStorage();
+        saveSongsToStorage();
+        
+        // 曲リストを更新
+        displaySongs('all');
+        displaySongs('favorites');
+        displaySongs('jpop');
+        displaySongs('anison');
+        displaySongs('vocaloid');
+        customCategories.forEach(category => {
+            displaySongs(category.id);
+        });
+    }
 }
 
 // イベントリスナーの設定
