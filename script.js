@@ -30,18 +30,6 @@ function getYouTubeVideoId(url) {
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// YouTubeの埋め込み可能チェックを行う関数
-async function checkEmbeddingEnabled(videoId) {
-    try {
-        const response = await fetch(`https://www.youtube.com/embed/${videoId}`);
-        const html = await response.text();
-        return !html.includes('この動画は埋め込みできません');
-    } catch (error) {
-        console.error('埋め込みチェックエラー:', error);
-        return false;
-    }
-}
-
 // YouTubeの動画を再生する関数
 async function playYouTubeVideo(url, title, artist) {
     const videoId = getYouTubeVideoId(url);
@@ -228,22 +216,16 @@ async function saveSong() {
     const key = document.getElementById('keySelect').value;
     const youtubeLink = document.getElementById('youtubeLinkInput').value;
 
-    if (!title || !artist) {
-        alert('曲名とアーティストは必須です。');
+    if (!title) {
+        alert('曲名は必須です。');
         return;
     }
 
-    // YouTubeリンクが入力されている場合、埋め込み可能かチェック
+    // YouTubeリンクが入力されている場合、動画IDの形式チェックのみ行う
     if (youtubeLink) {
         const videoId = getYouTubeVideoId(youtubeLink);
         if (!videoId) {
             alert('無効なYouTube URLです。');
-            return;
-        }
-
-        const isEmbeddingEnabled = await checkEmbeddingEnabled(videoId);
-        if (!isEmbeddingEnabled) {
-            alert('この動画は埋め込みが無効になっているため、追加できません。\n別の動画を選択してください。');
             return;
         }
     }
