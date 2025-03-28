@@ -100,13 +100,13 @@ function displaySongs(category, searchQuery = '') {
                 </a>
             ` : ''}
             <div class="song-actions">
-                <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${song.title}', '${song.artist}')">
+                <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${song.title}', '${song.artist}')" data-tooltip="${isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}">
                     <i class="bi bi-heart${isFavorite ? '-fill' : ''}"></i>
                 </button>
-                <button onclick="editSong('${songCategory}', ${index})">
+                <button onclick="editSong('${songCategory}', ${index})" data-tooltip="編集">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button onclick="deleteSong('${songCategory}', ${index})">
+                <button onclick="deleteSong('${songCategory}', ${index})" data-tooltip="削除">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>

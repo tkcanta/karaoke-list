@@ -149,13 +149,40 @@ h1 {
     cursor: pointer;
     color: #666;
     transition: color 0.2s;
+    position: relative;
 }
 
 .song-actions button:hover {
     color: #0d6efd;
 }
 
+.song-actions button::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.song-actions button:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
 .favorite-btn.active {
+    color: #dc3545;
+}
+
+.favorite-btn.active:hover {
     color: #dc3545;
 }
 
