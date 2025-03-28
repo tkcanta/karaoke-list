@@ -263,8 +263,20 @@ async function saveSong() {
 
     if (editIndex !== '') {
         // 編集モード
-        const [cat, index] = editIndex.split(',');
-        songs[cat][index] = song;
+        const [oldCategory, index] = editIndex.split(',');
+        
+        // カテゴリが変更された場合、元のカテゴリから曲を削除
+        if (oldCategory !== category) {
+            songs[oldCategory].splice(index, 1);
+        } else {
+            songs[oldCategory][index] = song;
+        }
+        
+        // 新しいカテゴリに曲を追加
+        if (!songs[category]) {
+            songs[category] = [];
+        }
+        songs[category].push(song);
     } else {
         // 新規追加モード
         if (!songs[category]) {
