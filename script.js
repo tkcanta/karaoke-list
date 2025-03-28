@@ -48,6 +48,10 @@ async function playYouTubeVideo(url, title, artist) {
 // 曲リストを表示する関数
 function displaySongs(category, searchQuery = '') {
     const songList = document.getElementById(`${category}List`);
+    if (!songList) {
+        console.error(`Song list element not found for category: ${category}`);
+        return;
+    }
     songList.innerHTML = ''; // リストをクリア
 
     let songsToDisplay;
@@ -88,6 +92,11 @@ function displaySongs(category, searchQuery = '') {
         
         // カテゴリを取得
         const songCategory = category === 'all' ? getSongCategory(song) : category;
+        
+        // カテゴリが見つからない場合はスキップ
+        if (!songCategory && category !== 'all') {
+            return;
+        }
         
         songElement.innerHTML = `
             <div class="song-title">${song.title}</div>
@@ -150,7 +159,7 @@ function getSongCategory(song) {
             return category;
         }
     }
-    return 'jpop'; // デフォルトはJ-POP
+    return null; // カテゴリが見つからない場合はnullを返す
 }
 
 // 曲を追加する関数
@@ -221,8 +230,11 @@ function toggleFavorite(title, artist) {
     localStorage.setItem('favorites', JSON.stringify(favorites));
 
     // 表示を更新
-    const currentTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').substring(1);
-    displaySongs(currentTab);
+    const activeTab = document.querySelector('.nav-link.active');
+    if (activeTab) {
+        const currentTab = activeTab.getAttribute('data-bs-target').substring(1);
+        displaySongs(currentTab);
+    }
     displaySongs('favorites');
 }
 
@@ -268,15 +280,15 @@ async function saveSong() {
         // カテゴリが変更された場合、元のカテゴリから曲を削除
         if (oldCategory !== category) {
             songs[oldCategory].splice(index, 1);
+            // 新しいカテゴリに曲を追加
+            if (!songs[category]) {
+                songs[category] = [];
+            }
+            songs[category].push(song);
         } else {
+            // 同じカテゴリ内での編集
             songs[oldCategory][index] = song;
         }
-        
-        // 新しいカテゴリに曲を追加
-        if (!songs[category]) {
-            songs[category] = [];
-        }
-        songs[category].push(song);
     } else {
         // 新規追加モード
         if (!songs[category]) {
@@ -404,11 +416,17 @@ function createCategoryTab(category) {
     tabContent.appendChild(songListContainer);
     
     // お気に入りタブの後に新しいタブを挿入
-    const favoritesTab = document.getElementById('favorites-tab').parentElement;
-    const nextTab = favoritesTab.nextElementSibling;
-    if (nextTab) {
-        tabsContainer.insertBefore(tabItem, nextTab);
+    const favoritesTab = document.getElementById('favorites-tab');
+    if (favoritesTab) {
+        const favoritesTabParent = favoritesTab.parentElement;
+        const nextTab = favoritesTabParent.nextElementSibling;
+        if (nextTab) {
+            tabsContainer.insertBefore(tabItem, nextTab);
+        } else {
+            tabsContainer.appendChild(tabItem);
+        }
     } else {
+        // お気に入りタブが見つからない場合は最後に追加
         tabsContainer.appendChild(tabItem);
     }
     
