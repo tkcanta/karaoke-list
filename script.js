@@ -190,13 +190,13 @@ function deleteSong(category, index) {
         
         // 全てのタブの曲リストを更新
         displaySongs('all');
+        displaySongs('favorites');
         displaySongs('jpop');
         displaySongs('anison');
         displaySongs('vocaloid');
         customCategories.forEach(category => {
             displaySongs(category.id);
         });
-        displaySongs('favorites');
     }
 }
 
@@ -290,13 +290,13 @@ async function saveSong() {
 
     // 曲リストを更新
     displaySongs('all');
+    displaySongs('favorites');
     displaySongs('jpop');
     displaySongs('anison');
     displaySongs('vocaloid');
     customCategories.forEach(category => {
         displaySongs(category.id);
     });
-    displaySongs('favorites');
 
     // モーダルを閉じる
     songModal.hide();
@@ -405,7 +405,12 @@ function createCategoryTab(category) {
     
     // お気に入りタブの後に新しいタブを挿入
     const favoritesTab = document.getElementById('favorites-tab').parentElement;
-    tabsContainer.insertAfter(tabItem, favoritesTab);
+    const nextTab = favoritesTab.nextElementSibling;
+    if (nextTab) {
+        tabsContainer.insertBefore(tabItem, nextTab);
+    } else {
+        tabsContainer.appendChild(tabItem);
+    }
     
     // タブコンテンツの追加
     contentContainer.appendChild(tabContent);
@@ -488,13 +493,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 各カテゴリの曲リストを表示
     displaySongs('all');
+    displaySongs('favorites');
     displaySongs('jpop');
     displaySongs('anison');
     displaySongs('vocaloid');
     customCategories.forEach(category => {
         displaySongs(category.id);
     });
-    displaySongs('favorites');
 
     // 曲追加ボタンのイベントリスナー
     document.getElementById('addSongButton').addEventListener('click', addSong);
