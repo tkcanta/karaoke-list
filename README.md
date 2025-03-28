@@ -1,8 +1,8 @@
 # カラオケ曲リスト
 
-このウェブアプリケーションは、カラオケで歌う曲を管理するためのシンプルなリストです。
+カラオケに行った時に「俺何の曲歌えるんだっけ...」と悩む時間を解決するカラオケで歌える曲リストのサービス
 
-サービスURL：[tkproduction.xyz/karaoke-list](https://tkproduction.xyz/karaoke-list)
+サービスURL：[tk-production.xyz/karaoke-list](https://tk-production.xyz/karaoke-list)
 
 ## 機能
 
