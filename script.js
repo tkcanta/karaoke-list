@@ -403,9 +403,9 @@ function createCategoryTab(category) {
     tabItem.appendChild(tabButton);
     tabContent.appendChild(songListContainer);
     
-    // お気に入りタブの前に新しいタブを挿入
+    // お気に入りタブの後に新しいタブを挿入
     const favoritesTab = document.getElementById('favorites-tab').parentElement;
-    tabsContainer.insertBefore(tabItem, favoritesTab);
+    tabsContainer.insertAfter(tabItem, favoritesTab);
     
     // タブコンテンツの追加
     contentContainer.appendChild(tabContent);

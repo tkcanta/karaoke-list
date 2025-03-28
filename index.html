@@ -33,6 +33,11 @@
                 <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">すべて</button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button" role="tab">
+                    <i class="bi bi-heart-fill text-danger"></i> お気に入り
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="jpop-tab" data-bs-toggle="tab" data-bs-target="#jpop" type="button" role="tab">J-POP</button>
             </li>
             <li class="nav-item" role="presentation">
@@ -41,11 +46,6 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="vocaloid-tab" data-bs-toggle="tab" data-bs-target="#vocaloid" type="button" role="tab">ボカロ</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button" role="tab">
-                    <i class="bi bi-heart-fill text-danger"></i> お気に入り
-                </button>
-            </li>
         </ul>
 
         <!-- タブコンテンツ -->
@@ -53,6 +53,11 @@
             <div class="tab-pane fade show active" id="all" role="tabpanel">
                 <div class="song-list" id="allList">
                     <!-- すべての曲リストがここに動的に追加されます -->
+                </div>
+            </div>
+            <div class="tab-pane fade" id="favorites" role="tabpanel">
+                <div class="song-list" id="favoritesList">
+                    <!-- お気に入り曲リストがここに動的に追加されます -->
                 </div>
             </div>
             <div class="tab-pane fade" id="jpop" role="tabpanel">
@@ -68,11 +73,6 @@
             <div class="tab-pane fade" id="vocaloid" role="tabpanel">
                 <div class="song-list" id="vocaloidList">
                     <!-- ボカロの曲リストがここに動的に追加されます -->
-                </div>
-            </div>
-            <div class="tab-pane fade" id="favorites" role="tabpanel">
-                <div class="song-list" id="favoritesList">
-                    <!-- お気に入り曲リストがここに動的に追加されます -->
                 </div>
             </div>
         </div>
