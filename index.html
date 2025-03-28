@@ -143,7 +143,21 @@
                                 <option value="jpop">J-POP</option>
                                 <option value="anime">アニメ</option>
                                 <option value="enka">演歌</option>
+                                <!-- カスタムカテゴリがここに追加されます -->
                             </select>
+                            <div class="d-flex align-items-center mt-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="addCategoryButton">
+                                    <i class="bi bi-plus-circle"></i> 新しいカテゴリを追加
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="newCategoryForm" style="display: none;">
+                            <label class="form-label">新しいカテゴリ名</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="newCategoryInput" placeholder="カテゴリ名を入力">
+                                <button class="btn btn-success" type="button" id="saveNewCategoryButton">追加</button>
+                                <button class="btn btn-outline-secondary" type="button" id="cancelNewCategoryButton">キャンセル</button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">曲名</label>

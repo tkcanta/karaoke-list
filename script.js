@@ -10,6 +10,9 @@ let songs = JSON.parse(localStorage.getItem('songs')) || {
 // お気に入りリスト
 let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
 
+// カスタムカテゴリリスト
+let customCategories = JSON.parse(localStorage.getItem('customCategories')) || [];
+
 // モーダル要素
 const songModal = new bootstrap.Modal(document.getElementById('songModal'));
 const youtubeSearchModal = new bootstrap.Modal(document.getElementById('youtubeSearchModal'));
@@ -112,16 +115,29 @@ function displaySongs(category, searchQuery = '') {
     });
 }
 
+// カテゴリリストを保存する関数
+function saveCategoriesToStorage() {
+    localStorage.setItem('customCategories', JSON.stringify(customCategories));
+}
+
+// カテゴリの表示名を取得する関数
+function getCategoryDisplayName(category) {
+    switch (category) {
+        case 'jpop': return 'J-POP';
+        case 'anime': return 'アニメ';
+        case 'enka': return '演歌';
+        default: 
+            // カスタムカテゴリの場合は対応する表示名を返す
+            const customCategory = customCategories.find(cat => cat.id === category);
+            return customCategory ? customCategory.name : category;
+    }
+}
+
 // カテゴリラベルを取得する関数
 function getCategoryLabel(song) {
     for (const [category, songList] of Object.entries(songs)) {
         if (songList.some(s => s.title === song.title && s.artist === song.artist)) {
-            switch (category) {
-                case 'jpop': return 'J-POP';
-                case 'anime': return 'アニメ';
-                case 'enka': return '演歌';
-                default: return '';
-            }
+            return getCategoryDisplayName(category);
         }
     }
     return '';
@@ -257,6 +273,9 @@ async function saveSong() {
     displaySongs('jpop');
     displaySongs('anime');
     displaySongs('enka');
+    customCategories.forEach(category => {
+        displaySongs(category.id);
+    });
     displaySongs('favorites');
 
     // モーダルを閉じる
@@ -328,13 +347,133 @@ function addSongFromYouTube(query = '', searchUrl = '') {
     songModal.show();
 }
 
+// カスタムカテゴリのタブを作成する関数
+function createCategoryTab(category) {
+    const tabsContainer = document.getElementById('songTabs');
+    const contentContainer = document.getElementById('songTabsContent');
+
+    // タブアイテムの作成
+    const tabItem = document.createElement('li');
+    tabItem.className = 'nav-item';
+    tabItem.setAttribute('role', 'presentation');
+    tabItem.setAttribute('data-category-id', category.id);
+    
+    // タブボタンの作成
+    const tabButton = document.createElement('button');
+    tabButton.className = 'nav-link';
+    tabButton.id = `${category.id}-tab`;
+    tabButton.setAttribute('data-bs-toggle', 'tab');
+    tabButton.setAttribute('data-bs-target', `#${category.id}`);
+    tabButton.setAttribute('type', 'button');
+    tabButton.setAttribute('role', 'tab');
+    tabButton.textContent = category.name;
+    
+    // タブコンテンツの作成
+    const tabContent = document.createElement('div');
+    tabContent.className = 'tab-pane fade';
+    tabContent.id = category.id;
+    tabContent.setAttribute('role', 'tabpanel');
+    
+    // 曲リスト用のコンテナの作成
+    const songListContainer = document.createElement('div');
+    songListContainer.className = 'song-list';
+    songListContainer.id = `${category.id}List`;
+    
+    // 要素の追加
+    tabItem.appendChild(tabButton);
+    tabContent.appendChild(songListContainer);
+    
+    // お気に入りタブの前に新しいタブを挿入
+    const favoritesTab = document.getElementById('favorites-tab').parentElement;
+    tabsContainer.insertBefore(tabItem, favoritesTab);
+    
+    // タブコンテンツの追加
+    contentContainer.appendChild(tabContent);
+}
+
+// カスタムカテゴリのセレクトオプションを追加する関数
+function addCategoryToSelect(category) {
+    const option = document.createElement('option');
+    option.value = category.id;
+    option.textContent = category.name;
+    categorySelect.appendChild(option);
+}
+
+// 新しいカテゴリを追加する関数
+function addNewCategory(categoryName) {
+    if (!categoryName.trim()) {
+        alert('カテゴリ名を入力してください。');
+        return false;
+    }
+    
+    // カテゴリIDを生成（スペースをハイフンに変換し、小文字に）
+    const categoryId = `category-${Date.now()}`;
+    
+    // 新しいカテゴリオブジェクトを作成
+    const newCategory = {
+        id: categoryId,
+        name: categoryName
+    };
+    
+    // カスタムカテゴリリストに追加
+    customCategories.push(newCategory);
+    
+    // songs オブジェクトに新しいカテゴリの配列を追加
+    songs[categoryId] = [];
+    
+    // カテゴリをセレクトボックスに追加
+    addCategoryToSelect(newCategory);
+    
+    // カテゴリのタブを作成
+    createCategoryTab(newCategory);
+    
+    // カテゴリリストを保存
+    saveCategoriesToStorage();
+    saveSongsToStorage();
+    
+    // 新しく追加したカテゴリを選択
+    categorySelect.value = categoryId;
+    
+    return true;
+}
+
+// すべてのカスタムカテゴリのタブとセレクトオプションを作成
+function initializeCustomCategories() {
+    // 既存のカスタムカテゴリタブをクリア
+    document.querySelectorAll('#songTabs [data-category-id]').forEach(tab => {
+        tab.remove();
+    });
+    
+    // セレクトボックスのカスタムカテゴリオプションをクリア
+    document.querySelectorAll('#categorySelect option:not([value="jpop"]):not([value="anime"]):not([value="enka"])').forEach(option => {
+        option.remove();
+    });
+    
+    // カスタムカテゴリのタブとセレクトオプションを追加
+    customCategories.forEach(category => {
+        createCategoryTab(category);
+        addCategoryToSelect(category);
+        
+        // songs オブジェクトにカテゴリがなければ追加
+        if (!songs[category.id]) {
+            songs[category.id] = [];
+        }
+    });
+}
+
 // イベントリスナーの設定
 document.addEventListener('DOMContentLoaded', () => {
+    // カスタムカテゴリの初期化
+    initializeCustomCategories();
+    
     // 各カテゴリの曲リストを表示
     displaySongs('all');
     displaySongs('jpop');
     displaySongs('anime');
     displaySongs('enka');
+    customCategories.forEach(category => {
+        displaySongs(category.id);
+    });
     displaySongs('favorites');
 
     // 曲追加ボタンのイベントリスナー
@@ -350,6 +489,42 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('searchInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             searchSongs();
+        }
+    });
+    
+    // 新しいカテゴリ追加ボタンのイベントリスナー
+    document.getElementById('addCategoryButton').addEventListener('click', () => {
+        document.getElementById('newCategoryForm').style.display = 'block';
+        document.getElementById('addCategoryButton').style.display = 'none';
+        document.getElementById('newCategoryInput').focus();
+    });
+    
+    // 新しいカテゴリ保存ボタンのイベントリスナー
+    document.getElementById('saveNewCategoryButton').addEventListener('click', () => {
+        const categoryName = document.getElementById('newCategoryInput').value.trim();
+        if (addNewCategory(categoryName)) {
+            document.getElementById('newCategoryForm').style.display = 'none';
+            document.getElementById('addCategoryButton').style.display = 'block';
+            document.getElementById('newCategoryInput').value = '';
+        }
+    });
+    
+    // 新しいカテゴリキャンセルボタンのイベントリスナー
+    document.getElementById('cancelNewCategoryButton').addEventListener('click', () => {
+        document.getElementById('newCategoryForm').style.display = 'none';
+        document.getElementById('addCategoryButton').style.display = 'block';
+        document.getElementById('newCategoryInput').value = '';
+    });
+    
+    // 新しいカテゴリ入力フィールドのEnterキーイベントリスナー
+    document.getElementById('newCategoryInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const categoryName = document.getElementById('newCategoryInput').value.trim();
+            if (addNewCategory(categoryName)) {
+                document.getElementById('newCategoryForm').style.display = 'none';
+                document.getElementById('addCategoryButton').style.display = 'block';
+                document.getElementById('newCategoryInput').value = '';
+            }
         }
     });
 }); 
