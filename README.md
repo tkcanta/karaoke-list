@@ -2,6 +2,8 @@
 
 このウェブアプリケーションは、カラオケで歌う曲を管理するためのシンプルなリストです。
 
+サービスURL：[tkproduction.xyz/karaoke-list](https://tkproduction.xyz/karaoke-list)
+
 ## 機能
 
 - 曲のカテゴリ分け（J-POP、アニメ、演歌）
