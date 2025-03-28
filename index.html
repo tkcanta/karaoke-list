@@ -36,10 +36,10 @@
                 <button class="nav-link" id="jpop-tab" data-bs-toggle="tab" data-bs-target="#jpop" type="button" role="tab">J-POP</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="anime-tab" data-bs-toggle="tab" data-bs-target="#anime" type="button" role="tab">アニメ</button>
+                <button class="nav-link" id="anison-tab" data-bs-toggle="tab" data-bs-target="#anison" type="button" role="tab">アニソン</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="enka-tab" data-bs-toggle="tab" data-bs-target="#enka" type="button" role="tab">演歌</button>
+                <button class="nav-link" id="vocaloid-tab" data-bs-toggle="tab" data-bs-target="#vocaloid" type="button" role="tab">ボカロ</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="favorites-tab" data-bs-toggle="tab" data-bs-target="#favorites" type="button" role="tab">
@@ -60,14 +60,14 @@
                     <!-- J-POPの曲リストがここに動的に追加されます -->
                 </div>
             </div>
-            <div class="tab-pane fade" id="anime" role="tabpanel">
-                <div class="song-list" id="animeList">
-                    <!-- アニメの曲リストがここに動的に追加されます -->
+            <div class="tab-pane fade" id="anison" role="tabpanel">
+                <div class="song-list" id="anisonList">
+                    <!-- アニソンの曲リストがここに動的に追加されます -->
                 </div>
             </div>
-            <div class="tab-pane fade" id="enka" role="tabpanel">
-                <div class="song-list" id="enkaList">
-                    <!-- 演歌の曲リストがここに動的に追加されます -->
+            <div class="tab-pane fade" id="vocaloid" role="tabpanel">
+                <div class="song-list" id="vocaloidList">
+                    <!-- ボカロの曲リストがここに動的に追加されます -->
                 </div>
             </div>
             <div class="tab-pane fade" id="favorites" role="tabpanel">
@@ -141,8 +141,8 @@
                             <label class="form-label">カテゴリ</label>
                             <select class="form-select" id="categorySelect" required>
                                 <option value="jpop">J-POP</option>
-                                <option value="anime">アニメ</option>
-                                <option value="enka">演歌</option>
+                                <option value="anison">アニソン</option>
+                                <option value="vocaloid">ボカロ</option>
                                 <!-- カスタムカテゴリがここに追加されます -->
                             </select>
                             <div class="d-flex align-items-center mt-2">

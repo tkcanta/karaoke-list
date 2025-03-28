@@ -3,8 +3,8 @@ let songs = JSON.parse(localStorage.getItem('songs')) || {
     jpop: [
         { title: '粛聖!! ロリ神レクイエム☆ / しぐれうい（9さい）', artist: 'しぐれうい', key: '原調', youtubeLink: 'https://www.youtube.com/watch?v=Ci_zad39Uhw' }
     ],
-    anime: [],
-    enka: []
+    anison: [],
+    vocaloid: []
 };
 
 // お気に入りリスト
@@ -124,8 +124,8 @@ function saveCategoriesToStorage() {
 function getCategoryDisplayName(category) {
     switch (category) {
         case 'jpop': return 'J-POP';
-        case 'anime': return 'アニメ';
-        case 'enka': return '演歌';
+        case 'anison': return 'アニソン';
+        case 'vocaloid': return 'ボカロ';
         default: 
             // カスタムカテゴリの場合は対応する表示名を返す
             const customCategory = customCategories.find(cat => cat.id === category);
@@ -271,8 +271,8 @@ async function saveSong() {
     // 曲リストを更新
     displaySongs('all');
     displaySongs('jpop');
-    displaySongs('anime');
-    displaySongs('enka');
+    displaySongs('anison');
+    displaySongs('vocaloid');
     customCategories.forEach(category => {
         displaySongs(category.id);
     });
@@ -445,7 +445,7 @@ function initializeCustomCategories() {
     });
     
     // セレクトボックスのカスタムカテゴリオプションをクリア
-    document.querySelectorAll('#categorySelect option:not([value="jpop"]):not([value="anime"]):not([value="enka"])').forEach(option => {
+    document.querySelectorAll('#categorySelect option:not([value="jpop"]):not([value="anison"]):not([value="vocaloid"])').forEach(option => {
         option.remove();
     });
     
@@ -469,8 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 各カテゴリの曲リストを表示
     displaySongs('all');
     displaySongs('jpop');
-    displaySongs('anime');
-    displaySongs('enka');
+    displaySongs('anison');
+    displaySongs('vocaloid');
     customCategories.forEach(category => {
         displaySongs(category.id);
     });
