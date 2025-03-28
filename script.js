@@ -187,7 +187,15 @@ function deleteSong(category, index) {
         songs[category].splice(index, 1);
         // ローカルストレージに保存
         saveSongsToStorage();
-        displaySongs(category);
+        
+        // 全てのタブの曲リストを更新
+        displaySongs('all');
+        displaySongs('jpop');
+        displaySongs('anison');
+        displaySongs('vocaloid');
+        customCategories.forEach(category => {
+            displaySongs(category.id);
+        });
         displaySongs('favorites');
     }
 }
