@@ -1,10 +1,10 @@
 // サンプルデータ
 let songs = JSON.parse(localStorage.getItem('songs')) || {
-    jpop: [
-        { title: '粛聖!! ロリ神レクイエム☆ / しぐれうい（9さい）', artist: 'しぐれうい', key: '原調', youtubeLink: 'https://www.youtube.com/watch?v=Ci_zad39Uhw' }
-    ],
+    jpop: [],
     anison: [],
-    vocaloid: []
+    vocaloid: [
+        { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原調', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
+    ]
 };
 
 // お気に入りリスト
