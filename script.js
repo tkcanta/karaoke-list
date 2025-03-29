@@ -103,117 +103,130 @@ function displaySongs(category, searchQuery = '') {
     
     songList.innerHTML = ''; // リストをクリア
 
-    let songsToDisplay;
-    if (category === CATEGORY.FAVORITES) {
-        songsToDisplay = favorites;
-    } else if (category === CATEGORY.ALL) {
-        // すべてのカテゴリの曲を結合
-        songsToDisplay = Object.values(songs).flat();
-    } else {
-        songsToDisplay = songs[category] || [];
-    }
-
-    // 検索フィルター適用
-    if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        songsToDisplay = songsToDisplay.filter(song => 
-            (song.title && song.title.toLowerCase().includes(query)) || 
-            (song.artist && song.artist.toLowerCase().includes(query))
-        );
-
-        // 検索結果が0件の場合、YouTube検索を実行
-        if (songsToDisplay.length === 0) {
-            searchYouTube(searchQuery);
+    let songsToDisplay = [];
+    
+    try {
+        if (category === CATEGORY.FAVORITES) {
+            songsToDisplay = favorites;
+        } else if (category === CATEGORY.ALL) {
+            // すべてのカテゴリの曲を結合
+            songsToDisplay = Object.values(songs).flat();
+        } else if (songs[category]) {
+            songsToDisplay = songs[category];
+        } else {
+            console.warn(`存在しないカテゴリ: ${category}`);
             return;
         }
-    }
 
-    songsToDisplay.forEach((song, index) => {
-        if (!song) return; // nullまたはundefinedの曲をスキップ
-        
-        const songElement = document.createElement('div');
-        songElement.className = 'song-item';
-        
-        const isFavorite = favorites.some(fav => 
-            fav.title === song.title && fav.artist === song.artist
-        );
-        
-        // カテゴリラベルを追加
-        const categoryLabel = category === CATEGORY.ALL ? 
-            `<span class="category-label">${getCategoryLabel(song)}</span>` : '';
-        
-        // カテゴリを取得
-        const songCategory = category === CATEGORY.ALL ? getSongCategory(song) : category;
-        
-        // カテゴリが見つからない場合はスキップ
-        if (!songCategory && category !== CATEGORY.ALL) {
-            return;
+        // 検索フィルター適用
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            songsToDisplay = songsToDisplay.filter(song => 
+                (song && song.title && song.title.toLowerCase().includes(query)) || 
+                (song && song.artist && song.artist.toLowerCase().includes(query))
+            );
+
+            // 検索結果が0件の場合、YouTube検索を実行
+            if (songsToDisplay.length === 0) {
+                searchYouTube(searchQuery);
+                return;
+            }
         }
-        
-        // 曲タイトルとアーティスト名のエスケープ処理
-        const safeTitle = escapeHtml(song.title || '');
-        const safeArtist = escapeHtml(song.artist || '');
-        const safeKey = escapeHtml(song.key || '');
-        const safeYoutubeLink = song.youtubeLink ? escapeHtml(song.youtubeLink) : '';
-        
-        songElement.innerHTML = `
-            <div class="song-title">${safeTitle}</div>
-            <div class="song-artist">${safeArtist}</div>
-            <div class="song-key">${safeKey}</div>
-            ${categoryLabel}
-            ${safeYoutubeLink ? `
-                <a href="#" class="youtube-link" data-url="${safeYoutubeLink}" data-title="${safeTitle}" data-artist="${safeArtist}">
-                    <i class="bi bi-youtube"></i> YouTubeで聴く
-                </a>
-            ` : ''}
-            <div class="song-actions">
-                <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-title="${safeTitle}" data-artist="${safeArtist}" data-tooltip="${isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}">
-                    <i class="bi bi-heart${isFavorite ? '-fill' : ''}"></i>
-                </button>
-                <button class="edit-btn" data-category="${songCategory}" data-index="${index}" data-tooltip="編集">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                <button class="delete-btn" data-category="${songCategory}" data-index="${index}" data-tooltip="削除">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-        `;
-        
-        // イベントリスナーを追加
-        const youtubeLink = songElement.querySelector('.youtube-link');
-        if (youtubeLink) {
-            youtubeLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                const url = e.currentTarget.getAttribute('data-url');
-                const title = e.currentTarget.getAttribute('data-title');
-                const artist = e.currentTarget.getAttribute('data-artist');
-                playYouTubeVideo(url, title, artist);
+
+        songsToDisplay.forEach((song, index) => {
+            if (!song) return; // nullまたはundefinedの曲をスキップ
+            
+            const songElement = document.createElement('div');
+            songElement.className = 'song-item';
+            
+            const isFavorite = favorites.some(fav => 
+                fav && song && fav.title === song.title && fav.artist === song.artist
+            );
+            
+            // カテゴリ情報の取得
+            let songCategory = category;
+            let categoryLabel = '';
+            
+            // 全曲表示の場合は、実際のカテゴリを取得
+            if (category === CATEGORY.ALL) {
+                songCategory = getSongCategory(song);
+                if (songCategory) {
+                    categoryLabel = `<span class="category-label">${getCategoryLabel(song)}</span>`;
+                } else {
+                    // カテゴリが見つからない場合はスキップ
+                    console.warn('カテゴリが見つからない曲:', song);
+                    return;
+                }
+            }
+            
+            // 曲タイトルとアーティスト名のエスケープ処理
+            const safeTitle = escapeHtml(song.title || '');
+            const safeArtist = escapeHtml(song.artist || '');
+            const safeKey = escapeHtml(song.key || '');
+            const safeYoutubeLink = song.youtubeLink ? escapeHtml(song.youtubeLink) : '';
+            
+            songElement.innerHTML = `
+                <div class="song-title">${safeTitle}</div>
+                <div class="song-artist">${safeArtist}</div>
+                <div class="song-key">${safeKey}</div>
+                ${categoryLabel}
+                ${safeYoutubeLink ? `
+                    <a href="#" class="youtube-link" data-url="${safeYoutubeLink}" data-title="${safeTitle}" data-artist="${safeArtist}">
+                        <i class="bi bi-youtube"></i> YouTubeで聴く
+                    </a>
+                ` : ''}
+                <div class="song-actions">
+                    <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-title="${safeTitle}" data-artist="${safeArtist}" data-tooltip="${isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}">
+                        <i class="bi bi-heart${isFavorite ? '-fill' : ''}"></i>
+                    </button>
+                    <button class="edit-btn" data-category="${songCategory}" data-index="${index}" data-tooltip="編集">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="delete-btn" data-category="${songCategory}" data-index="${index}" data-tooltip="削除">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            // イベントリスナーを追加
+            const youtubeLink = songElement.querySelector('.youtube-link');
+            if (youtubeLink) {
+                youtubeLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const url = e.currentTarget.getAttribute('data-url');
+                    const title = e.currentTarget.getAttribute('data-title');
+                    const artist = e.currentTarget.getAttribute('data-artist');
+                    playYouTubeVideo(url, title, artist);
+                });
+            }
+            
+            const favoriteBtn = songElement.querySelector('.favorite-btn');
+            favoriteBtn.addEventListener('click', () => {
+                const title = favoriteBtn.getAttribute('data-title');
+                const artist = favoriteBtn.getAttribute('data-artist');
+                toggleFavorite(title, artist);
             });
-        }
-        
-        const favoriteBtn = songElement.querySelector('.favorite-btn');
-        favoriteBtn.addEventListener('click', () => {
-            const title = favoriteBtn.getAttribute('data-title');
-            const artist = favoriteBtn.getAttribute('data-artist');
-            toggleFavorite(title, artist);
+            
+            const editBtn = songElement.querySelector('.edit-btn');
+            editBtn.addEventListener('click', () => {
+                const category = editBtn.getAttribute('data-category');
+                const index = parseInt(editBtn.getAttribute('data-index'));
+                editSong(category, index);
+            });
+            
+            const deleteBtn = songElement.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                const category = deleteBtn.getAttribute('data-category');
+                const index = parseInt(deleteBtn.getAttribute('data-index'));
+                deleteSong(category, index);
+            });
+            
+            songList.appendChild(songElement);
         });
-        
-        const editBtn = songElement.querySelector('.edit-btn');
-        editBtn.addEventListener('click', () => {
-            const category = editBtn.getAttribute('data-category');
-            const index = parseInt(editBtn.getAttribute('data-index'));
-            editSong(category, index);
-        });
-        
-        const deleteBtn = songElement.querySelector('.delete-btn');
-        deleteBtn.addEventListener('click', () => {
-            const category = deleteBtn.getAttribute('data-category');
-            const index = parseInt(deleteBtn.getAttribute('data-index'));
-            deleteSong(category, index);
-        });
-        
-        songList.appendChild(songElement);
-    });
+    } catch (error) {
+        console.error('曲リスト表示エラー:', error);
+        songList.innerHTML = '<div class="alert alert-danger">曲リストの表示中にエラーが発生しました。</div>';
+    }
 }
 
 /**
@@ -272,16 +285,42 @@ function getCategoryLabel(song) {
  * @returns {string|null} カテゴリID、見つからない場合はnull
  */
 function getSongCategory(song) {
-    if (!song) return null;
-    
-    for (const [category, songList] of Object.entries(songs)) {
-        if (!Array.isArray(songList)) continue;
-        
-        if (songList.some(s => s && s.title === song.title && s.artist === song.artist)) {
-            return category;
-        }
+    if (!song || !song.title) {
+        console.warn('無効な曲オブジェクト:', song);
+        return null;
     }
-    return null;
+    
+    try {
+        // カテゴリを順番に検索
+        for (const [category, songList] of Object.entries(songs)) {
+            if (!Array.isArray(songList)) {
+                console.warn(`カテゴリが配列ではありません: ${category}`);
+                continue;
+            }
+            
+            // 曲名とアーティスト名が一致する曲を検索
+            const found = songList.some(s => 
+                s && song && 
+                s.title === song.title && 
+                (
+                    // アーティスト名も一致するか、どちらかが未設定
+                    (!s.artist && !song.artist) || 
+                    (s.artist === song.artist)
+                )
+            );
+            
+            if (found) {
+                return category;
+            }
+        }
+        
+        // 一致する曲が見つからない場合
+        console.warn('カテゴリが見つからない曲:', song);
+        return null;
+    } catch (error) {
+        console.error('カテゴリ検索エラー:', error);
+        return null;
+    }
 }
 
 // カテゴリリストを保存する関数
@@ -305,25 +344,62 @@ function addSong() {
  * @param {number} index - 曲のインデックス
  */
 function editSong(category, index) {
-    const song = songs[category]?.[index];
-    if (!song) {
-        console.error(`編集する曲が見つかりません: カテゴリ=${category}, インデックス=${index}`);
+    // カテゴリが存在しない場合の対応
+    if (!category || category === 'undefined') {
+        console.error(`無効なカテゴリ: ${category}`);
+        alert('編集する曲のカテゴリが見つかりません。');
         return;
     }
     
-    // モーダルのタイトルを変更
-    modalTitle.textContent = '曲を編集';
+    // インデックスが数値でない場合の対応
+    const indexNum = parseInt(index);
+    if (isNaN(indexNum)) {
+        console.error(`無効なインデックス: ${index}`);
+        alert('編集する曲のインデックスが無効です。');
+        return;
+    }
     
-    // フォームに値を設定
-    editIndex.value = `${category},${index}`;
-    categorySelect.value = category;
-    titleInput.value = song.title || '';
-    artistInput.value = song.artist || '';
-    keySelect.value = song.key || '原調';
-    youtubeLinkInput.value = song.youtubeLink || '';
+    // songsオブジェクトにカテゴリが存在するか確認
+    if (!songs[category]) {
+        console.error(`カテゴリが存在しません: ${category}`);
+        alert('編集する曲のカテゴリが見つかりません。');
+        return;
+    }
     
-    // モーダルを表示
-    songModal.show();
+    // 曲の取得
+    const song = songs[category][indexNum];
+    if (!song) {
+        console.error(`編集する曲が見つかりません: カテゴリ=${category}, インデックス=${index}`);
+        alert('編集する曲が見つかりません。');
+        return;
+    }
+    
+    try {
+        // モーダルのタイトルを変更
+        modalTitle.textContent = '曲を編集';
+        
+        // フォームに値を設定
+        editIndex.value = `${category},${indexNum}`;
+        
+        // カテゴリセレクトの設定
+        if (categorySelect.querySelector(`option[value="${category}"]`)) {
+            categorySelect.value = category;
+        } else {
+            console.warn(`カテゴリの選択肢が見つかりません: ${category}、デフォルトに設定します`);
+            categorySelect.value = CATEGORY.JPOP;
+        }
+        
+        titleInput.value = song.title || '';
+        artistInput.value = song.artist || '';
+        keySelect.value = song.key || '原調';
+        youtubeLinkInput.value = song.youtubeLink || '';
+        
+        // モーダルを表示
+        songModal.show();
+    } catch (error) {
+        console.error('曲の編集フォーム表示エラー:', error);
+        alert('曲の編集準備中にエラーが発生しました。');
+    }
 }
 
 /**
@@ -332,20 +408,63 @@ function editSong(category, index) {
  * @param {number} index - 曲のインデックス
  */
 function deleteSong(category, index) {
-    if (!songs[category] || !songs[category][index]) {
-        console.error(`削除する曲が見つかりません: カテゴリ=${category}, インデックス=${index}`);
+    // カテゴリが存在しない場合の対応
+    if (!category || category === 'undefined') {
+        console.error(`無効なカテゴリ: ${category}`);
+        alert('削除する曲のカテゴリが見つかりません。');
         return;
     }
     
-    if (confirm('この曲を削除してもよろしいですか？')) {
-        // 曲を削除
-        songs[category].splice(index, 1);
-        
-        // ローカルストレージに保存
-        Storage.saveSongs(songs);
-        
-        // 全てのタブの曲リストを更新
-        updateAllSongLists();
+    // インデックスが数値でない場合の対応
+    const indexNum = parseInt(index);
+    if (isNaN(indexNum)) {
+        console.error(`無効なインデックス: ${index}`);
+        alert('削除する曲のインデックスが無効です。');
+        return;
+    }
+    
+    // songsオブジェクトにカテゴリが存在するか確認
+    if (!songs[category]) {
+        console.error(`カテゴリが存在しません: ${category}`);
+        alert('削除する曲のカテゴリが見つかりません。');
+        return;
+    }
+    
+    // 曲の存在確認
+    if (!songs[category][indexNum]) {
+        console.error(`削除する曲が見つかりません: カテゴリ=${category}, インデックス=${indexNum}`);
+        alert('削除する曲が見つかりません。');
+        return;
+    }
+    
+    try {
+        if (confirm('この曲を削除してもよろしいですか？')) {
+            // 曲の情報を保存（お気に入りから削除するため）
+            const deletedSong = songs[category][indexNum];
+            
+            // 曲を削除
+            songs[category].splice(indexNum, 1);
+            
+            // お気に入りからも削除
+            if (deletedSong) {
+                const favIndex = favorites.findIndex(fav => 
+                    fav && deletedSong && fav.title === deletedSong.title && fav.artist === deletedSong.artist
+                );
+                if (favIndex !== -1) {
+                    favorites.splice(favIndex, 1);
+                    Storage.saveFavorites(favorites);
+                }
+            }
+            
+            // ローカルストレージに保存
+            Storage.saveSongs(songs);
+            
+            // 全てのタブの曲リストを更新
+            updateAllSongLists();
+        }
+    } catch (error) {
+        console.error('曲の削除エラー:', error);
+        alert('曲の削除中にエラーが発生しました。');
     }
 }
 
