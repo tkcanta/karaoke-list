@@ -70,6 +70,11 @@ h1 {
     opacity: 0.5;
     transition: opacity 0.2s;
     font-size: 0.5rem;
+    display: none;
+}
+
+.nav-tabs .nav-link.active .btn-close {
+    display: block;
 }
 
 .nav-tabs .btn-close:hover {
