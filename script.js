@@ -1,17 +1,44 @@
-// サンプルデータ
-let songs = JSON.parse(localStorage.getItem('songs')) || {
-    jpop: [],
-    anison: [],
-    vocaloid: [
-        { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原調', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
-    ]
+// 定数定義
+const CATEGORY = {
+    ALL: 'all',
+    FAVORITES: 'favorites',
+    JPOP: 'jpop',
+    ANISON: 'anison',
+    VOCALOID: 'vocaloid'
 };
 
-// お気に入りリスト
-let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+// ストレージ管理
+const Storage = {
+    saveSongs(data) {
+        localStorage.setItem('songs', JSON.stringify(data));
+    },
+    loadSongs() {
+        return JSON.parse(localStorage.getItem('songs')) || {
+            [CATEGORY.JPOP]: [],
+            [CATEGORY.ANISON]: [],
+            [CATEGORY.VOCALOID]: [
+                { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原調', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
+            ]
+        };
+    },
+    saveFavorites(data) {
+        localStorage.setItem('favorites', JSON.stringify(data));
+    },
+    loadFavorites() {
+        return JSON.parse(localStorage.getItem('favorites')) || [];
+    },
+    saveCategories(data) {
+        localStorage.setItem('customCategories', JSON.stringify(data));
+    },
+    loadCategories() {
+        return JSON.parse(localStorage.getItem('customCategories')) || [];
+    }
+};
 
-// カスタムカテゴリリスト
-let customCategories = JSON.parse(localStorage.getItem('customCategories')) || [];
+// データ初期化
+let songs = Storage.loadSongs();
+let favorites = Storage.loadFavorites();
+let customCategories = Storage.loadCategories();
 
 // モーダル要素
 const songModal = new bootstrap.Modal(document.getElementById('songModal'));
@@ -26,38 +53,60 @@ const keySelect = document.getElementById('keySelect');
 const youtubeLinkInput = document.getElementById('youtubeLinkInput');
 const youtubeSearchResults = document.getElementById('youtubeSearchResults');
 
-// YouTubeの動画IDを取得する関数
+/**
+ * YouTubeの動画IDを取得する関数
+ * @param {string} url - YouTubeのURL
+ * @returns {string|null} YouTubeの動画ID、無効なURLの場合はnull
+ */
 function getYouTubeVideoId(url) {
+    if (!url) return null;
+    
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
 }
 
-// YouTubeの動画を再生する関数
+/**
+ * YouTubeの動画を再生する関数
+ * @param {string} url - YouTubeのURL
+ * @param {string} title - 曲のタイトル
+ * @param {string} artist - アーティスト名
+ * @returns {Promise<void>}
+ */
 async function playYouTubeVideo(url, title, artist) {
-    const videoId = getYouTubeVideoId(url);
-    if (!videoId) {
-        alert('無効なYouTube URLです。');
-        return;
-    }
+    try {
+        const videoId = getYouTubeVideoId(url);
+        if (!videoId) {
+            alert('無効なYouTube URLです。');
+            return;
+        }
 
-    // 直接YouTubeで開く
-    window.open(url, '_blank');
+        // 直接YouTubeで開く
+        window.open(url, '_blank');
+    } catch (error) {
+        console.error('YouTube再生エラー:', error);
+        alert('動画の再生中にエラーが発生しました。');
+    }
 }
 
-// 曲リストを表示する関数
+/**
+ * 曲リストを表示する関数
+ * @param {string} category - 表示するカテゴリ
+ * @param {string} searchQuery - 検索クエリ（オプション）
+ */
 function displaySongs(category, searchQuery = '') {
     const songList = document.getElementById(`${category}List`);
     if (!songList) {
-        console.error(`Song list element not found for category: ${category}`);
+        console.error(`カテゴリ「${category}」の曲リスト要素が見つかりません。`);
         return;
     }
+    
     songList.innerHTML = ''; // リストをクリア
 
     let songsToDisplay;
-    if (category === 'favorites') {
+    if (category === CATEGORY.FAVORITES) {
         songsToDisplay = favorites;
-    } else if (category === 'all') {
+    } else if (category === CATEGORY.ALL) {
         // すべてのカテゴリの曲を結合
         songsToDisplay = Object.values(songs).flat();
     } else {
@@ -68,8 +117,8 @@ function displaySongs(category, searchQuery = '') {
     if (searchQuery) {
         const query = searchQuery.toLowerCase();
         songsToDisplay = songsToDisplay.filter(song => 
-            song.title.toLowerCase().includes(query) || 
-            song.artist.toLowerCase().includes(query)
+            (song.title && song.title.toLowerCase().includes(query)) || 
+            (song.artist && song.artist.toLowerCase().includes(query))
         );
 
         // 検索結果が0件の場合、YouTube検索を実行
@@ -80,61 +129,118 @@ function displaySongs(category, searchQuery = '') {
     }
 
     songsToDisplay.forEach((song, index) => {
+        if (!song) return; // nullまたはundefinedの曲をスキップ
+        
         const songElement = document.createElement('div');
         songElement.className = 'song-item';
+        
         const isFavorite = favorites.some(fav => 
             fav.title === song.title && fav.artist === song.artist
         );
         
         // カテゴリラベルを追加
-        const categoryLabel = category === 'all' ? 
+        const categoryLabel = category === CATEGORY.ALL ? 
             `<span class="category-label">${getCategoryLabel(song)}</span>` : '';
         
         // カテゴリを取得
-        const songCategory = category === 'all' ? getSongCategory(song) : category;
+        const songCategory = category === CATEGORY.ALL ? getSongCategory(song) : category;
         
         // カテゴリが見つからない場合はスキップ
-        if (!songCategory && category !== 'all') {
+        if (!songCategory && category !== CATEGORY.ALL) {
             return;
         }
         
+        // 曲タイトルとアーティスト名のエスケープ処理
+        const safeTitle = escapeHtml(song.title || '');
+        const safeArtist = escapeHtml(song.artist || '');
+        const safeKey = escapeHtml(song.key || '');
+        const safeYoutubeLink = song.youtubeLink ? escapeHtml(song.youtubeLink) : '';
+        
         songElement.innerHTML = `
-            <div class="song-title">${song.title}</div>
-            <div class="song-artist">${song.artist}</div>
-            <div class="song-key">${song.key}</div>
+            <div class="song-title">${safeTitle}</div>
+            <div class="song-artist">${safeArtist}</div>
+            <div class="song-key">${safeKey}</div>
             ${categoryLabel}
-            ${song.youtubeLink ? `
-                <a href="#" class="youtube-link" onclick="playYouTubeVideo('${song.youtubeLink}', '${song.title}', '${song.artist}'); return false;">
+            ${safeYoutubeLink ? `
+                <a href="#" class="youtube-link" data-url="${safeYoutubeLink}" data-title="${safeTitle}" data-artist="${safeArtist}">
                     <i class="bi bi-youtube"></i> YouTubeで聴く
                 </a>
             ` : ''}
             <div class="song-actions">
-                <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${song.title}', '${song.artist}')" data-tooltip="${isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}">
+                <button class="favorite-btn ${isFavorite ? 'active' : ''}" data-title="${safeTitle}" data-artist="${safeArtist}" data-tooltip="${isFavorite ? 'お気に入りから削除' : 'お気に入りに追加'}">
                     <i class="bi bi-heart${isFavorite ? '-fill' : ''}"></i>
                 </button>
-                <button onclick="editSong('${songCategory}', ${index})" data-tooltip="編集">
+                <button class="edit-btn" data-category="${songCategory}" data-index="${index}" data-tooltip="編集">
                     <i class="bi bi-pencil"></i>
                 </button>
-                <button onclick="deleteSong('${songCategory}', ${index})" data-tooltip="削除">
+                <button class="delete-btn" data-category="${songCategory}" data-index="${index}" data-tooltip="削除">
                     <i class="bi bi-trash"></i>
                 </button>
             </div>
         `;
+        
+        // イベントリスナーを追加
+        const youtubeLink = songElement.querySelector('.youtube-link');
+        if (youtubeLink) {
+            youtubeLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = e.currentTarget.getAttribute('data-url');
+                const title = e.currentTarget.getAttribute('data-title');
+                const artist = e.currentTarget.getAttribute('data-artist');
+                playYouTubeVideo(url, title, artist);
+            });
+        }
+        
+        const favoriteBtn = songElement.querySelector('.favorite-btn');
+        favoriteBtn.addEventListener('click', () => {
+            const title = favoriteBtn.getAttribute('data-title');
+            const artist = favoriteBtn.getAttribute('data-artist');
+            toggleFavorite(title, artist);
+        });
+        
+        const editBtn = songElement.querySelector('.edit-btn');
+        editBtn.addEventListener('click', () => {
+            const category = editBtn.getAttribute('data-category');
+            const index = parseInt(editBtn.getAttribute('data-index'));
+            editSong(category, index);
+        });
+        
+        const deleteBtn = songElement.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', () => {
+            const category = deleteBtn.getAttribute('data-category');
+            const index = parseInt(deleteBtn.getAttribute('data-index'));
+            deleteSong(category, index);
+        });
+        
         songList.appendChild(songElement);
     });
 }
 
-// カテゴリリストを保存する関数
-function saveCategoriesToStorage() {
-    localStorage.setItem('customCategories', JSON.stringify(customCategories));
+/**
+ * HTMLエンティティをエスケープする関数
+ * @param {string} unsafe - エスケープ前の文字列
+ * @returns {string} エスケープ後の文字列
+ */
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
-// カテゴリの表示名を取得する関数
+/**
+ * カテゴリの表示名を取得する関数
+ * @param {string} category - カテゴリID
+ * @returns {string} カテゴリの表示名
+ */
 function getCategoryDisplayName(category) {
     switch (category) {
-        case 'jpop': return 'J-POP';
-        case 'anison': return 'アニソン';
-        case 'vocaloid': return 'ボカロ';
+        case CATEGORY.JPOP: return 'J-POP';
+        case CATEGORY.ANISON: return 'アニソン';
+        case CATEGORY.VOCALOID: return 'ボカロ';
         default: 
             // カスタムカテゴリの場合は対応する表示名を返す
             const customCategory = customCategories.find(cat => cat.id === category);
@@ -142,27 +248,50 @@ function getCategoryDisplayName(category) {
     }
 }
 
-// カテゴリラベルを取得する関数
+/**
+ * カテゴリラベルを取得する関数
+ * @param {Object} song - 曲オブジェクト
+ * @returns {string} カテゴリラベル
+ */
 function getCategoryLabel(song) {
+    if (!song) return '';
+    
     for (const [category, songList] of Object.entries(songs)) {
-        if (songList.some(s => s.title === song.title && s.artist === song.artist)) {
+        if (!Array.isArray(songList)) continue;
+        
+        if (songList.some(s => s && s.title === song.title && s.artist === song.artist)) {
             return getCategoryDisplayName(category);
         }
     }
     return '';
 }
 
-// 曲のカテゴリを取得する関数
+/**
+ * 曲のカテゴリを取得する関数
+ * @param {Object} song - 曲オブジェクト
+ * @returns {string|null} カテゴリID、見つからない場合はnull
+ */
 function getSongCategory(song) {
+    if (!song) return null;
+    
     for (const [category, songList] of Object.entries(songs)) {
-        if (songList.some(s => s.title === song.title && s.artist === song.artist)) {
+        if (!Array.isArray(songList)) continue;
+        
+        if (songList.some(s => s && s.title === song.title && s.artist === song.artist)) {
             return category;
         }
     }
-    return null; // カテゴリが見つからない場合はnullを返す
+    return null;
 }
 
-// 曲を追加する関数
+// カテゴリリストを保存する関数
+function saveCategoriesToStorage() {
+    localStorage.setItem('customCategories', JSON.stringify(customCategories));
+}
+
+/**
+ * 曲を追加するモーダルを表示する関数
+ */
 function addSong() {
     modalTitle.textContent = '曲を追加';
     songForm.reset();
@@ -170,166 +299,221 @@ function addSong() {
     songModal.show();
 }
 
-// 曲を編集する関数
+/**
+ * 曲を編集するモーダルを表示する関数
+ * @param {string} category - 曲のカテゴリ
+ * @param {number} index - 曲のインデックス
+ */
 function editSong(category, index) {
-    const song = songs[category][index];
-    if (song) {
-        // モーダルのタイトルを変更
-        document.getElementById('modalTitle').textContent = '曲を編集';
-        
-        // フォームに値を設定
-        document.getElementById('editIndex').value = `${category},${index}`;
-        document.getElementById('categorySelect').value = category;
-        document.getElementById('titleInput').value = song.title;
-        document.getElementById('artistInput').value = song.artist;
-        document.getElementById('keySelect').value = song.key;
-        document.getElementById('youtubeLinkInput').value = song.youtubeLink || '';
-        
-        // モーダルを表示
-        songModal.show();
+    const song = songs[category]?.[index];
+    if (!song) {
+        console.error(`編集する曲が見つかりません: カテゴリ=${category}, インデックス=${index}`);
+        return;
     }
+    
+    // モーダルのタイトルを変更
+    modalTitle.textContent = '曲を編集';
+    
+    // フォームに値を設定
+    editIndex.value = `${category},${index}`;
+    categorySelect.value = category;
+    titleInput.value = song.title || '';
+    artistInput.value = song.artist || '';
+    keySelect.value = song.key || '原調';
+    youtubeLinkInput.value = song.youtubeLink || '';
+    
+    // モーダルを表示
+    songModal.show();
 }
 
-// 曲を削除する関数
+/**
+ * 曲を削除する関数
+ * @param {string} category - 曲のカテゴリ
+ * @param {number} index - 曲のインデックス
+ */
 function deleteSong(category, index) {
+    if (!songs[category] || !songs[category][index]) {
+        console.error(`削除する曲が見つかりません: カテゴリ=${category}, インデックス=${index}`);
+        return;
+    }
+    
     if (confirm('この曲を削除してもよろしいですか？')) {
+        // 曲を削除
         songs[category].splice(index, 1);
+        
         // ローカルストレージに保存
-        saveSongsToStorage();
+        Storage.saveSongs(songs);
         
         // 全てのタブの曲リストを更新
-        displaySongs('all');
-        displaySongs('favorites');
-        displaySongs('jpop');
-        displaySongs('anison');
-        displaySongs('vocaloid');
-        customCategories.forEach(category => {
-            displaySongs(category.id);
-        });
+        updateAllSongLists();
     }
 }
 
-// お気に入りを切り替える関数
+/**
+ * お気に入りを切り替える関数
+ * @param {string} title - 曲のタイトル
+ * @param {string} artist - アーティスト名
+ */
 function toggleFavorite(title, artist) {
+    if (!title) return;
+    
     const index = favorites.findIndex(fav => 
-        fav.title === title && fav.artist === artist
+        fav && fav.title === title && fav.artist === artist
     );
 
     if (index === -1) {
         // お気に入りに追加
         const song = Object.values(songs).flat().find(s => 
-            s.title === title && s.artist === artist
+            s && s.title === title && s.artist === artist
         );
-        favorites.push(song);
+        
+        if (song) {
+            favorites.push(song);
+        }
     } else {
         // お気に入りから削除
         favorites.splice(index, 1);
     }
 
     // ローカルストレージに保存
-    localStorage.setItem('favorites', JSON.stringify(favorites));
+    Storage.saveFavorites(favorites);
 
     // 表示を更新
     const activeTab = document.querySelector('.nav-link.active');
     if (activeTab) {
-        const currentTab = activeTab.getAttribute('data-bs-target').substring(1);
-        displaySongs(currentTab);
-    }
-    displaySongs('favorites');
-}
-
-// 曲を保存する関数
-function saveSongsToStorage() {
-    localStorage.setItem('songs', JSON.stringify(songs));
-}
-
-// 曲を保存する関数
-async function saveSong() {
-    const editIndex = document.getElementById('editIndex').value;
-    const category = document.getElementById('categorySelect').value;
-    const title = document.getElementById('titleInput').value;
-    const artist = document.getElementById('artistInput').value;
-    const key = document.getElementById('keySelect').value;
-    const youtubeLink = document.getElementById('youtubeLinkInput').value;
-
-    if (!title) {
-        alert('曲名は必須です。');
-        return;
-    }
-
-    // YouTubeリンクが入力されている場合、動画IDの形式チェックのみ行う
-    if (youtubeLink) {
-        const videoId = getYouTubeVideoId(youtubeLink);
-        if (!videoId) {
-            alert('無効なYouTube URLです。');
-            return;
+        const currentTab = activeTab.getAttribute('data-bs-target')?.substring(1);
+        if (currentTab) {
+            displaySongs(currentTab);
         }
     }
+    displaySongs(CATEGORY.FAVORITES);
+}
 
-    const song = {
-        title,
-        artist,
-        key,
-        youtubeLink
-    };
+/**
+ * 曲をローカルストレージに保存する関数
+ */
+function saveSongsToStorage() {
+    Storage.saveSongs(songs);
+}
 
-    if (editIndex !== '') {
-        // 編集モード
-        const [oldCategory, index] = editIndex.split(',');
-        
-        // カテゴリが変更された場合、元のカテゴリから曲を削除
-        if (oldCategory !== category) {
-            songs[oldCategory].splice(index, 1);
-            // 新しいカテゴリに曲を追加
+/**
+ * 曲を保存する関数
+ */
+async function saveSong() {
+    try {
+        const editIndexValue = editIndex.value;
+        const category = categorySelect.value;
+        const title = titleInput.value.trim();
+        const artist = artistInput.value.trim();
+        const key = keySelect.value;
+        const youtubeLink = youtubeLinkInput.value.trim();
+
+        // 入力検証
+        if (!title) {
+            alert('曲名は必須です。');
+            return;
+        }
+
+        if (!category) {
+            alert('カテゴリを選択してください。');
+            return;
+        }
+
+        // YouTubeリンクが入力されている場合、動画IDの形式チェック
+        if (youtubeLink) {
+            const videoId = getYouTubeVideoId(youtubeLink);
+            if (!videoId) {
+                alert('無効なYouTube URLです。');
+                return;
+            }
+        }
+
+        const song = {
+            title,
+            artist,
+            key,
+            youtubeLink
+        };
+
+        if (editIndexValue) {
+            // 編集モード
+            const [oldCategory, index] = editIndexValue.split(',');
+            const indexNum = parseInt(index);
+            
+            if (!songs[oldCategory] || isNaN(indexNum) || indexNum < 0 || indexNum >= songs[oldCategory].length) {
+                console.error(`編集する曲が見つかりません: カテゴリ=${oldCategory}, インデックス=${index}`);
+                alert('曲の更新中にエラーが発生しました。');
+                return;
+            }
+            
+            // カテゴリが変更された場合、元のカテゴリから曲を削除
+            if (oldCategory !== category) {
+                songs[oldCategory].splice(indexNum, 1);
+                
+                // 新しいカテゴリに曲を追加
+                if (!songs[category]) {
+                    songs[category] = [];
+                }
+                songs[category].push(song);
+            } else {
+                // 同じカテゴリ内での編集
+                songs[oldCategory][indexNum] = song;
+            }
+        } else {
+            // 新規追加モード
             if (!songs[category]) {
                 songs[category] = [];
             }
             songs[category].push(song);
-        } else {
-            // 同じカテゴリ内での編集
-            songs[oldCategory][index] = song;
         }
-    } else {
-        // 新規追加モード
-        if (!songs[category]) {
-            songs[category] = [];
-        }
-        songs[category].push(song);
+
+        // ローカルストレージに保存
+        Storage.saveSongs(songs);
+
+        // 曲リストを更新
+        updateAllSongLists();
+
+        // モーダルを閉じる
+        songModal.hide();
+
+        // フォームをリセット
+        songForm.reset();
+        editIndex.value = '';
+    } catch (error) {
+        console.error('曲の保存エラー:', error);
+        alert('曲の保存中にエラーが発生しました。');
     }
-
-    // ローカルストレージに保存
-    saveSongsToStorage();
-
-    // 曲リストを更新
-    displaySongs('all');
-    displaySongs('favorites');
-    displaySongs('jpop');
-    displaySongs('anison');
-    displaySongs('vocaloid');
-    customCategories.forEach(category => {
-        displaySongs(category.id);
-    });
-
-    // モーダルを閉じる
-    songModal.hide();
-
-    // フォームをリセット
-    document.getElementById('songForm').reset();
-    document.getElementById('editIndex').value = '';
 }
 
-// 検索機能
+/**
+ * 検索機能
+ */
 function searchSongs() {
-    const searchQuery = document.getElementById('searchInput').value.trim();
-    const currentTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').substring(1);
-    displaySongs(currentTab, searchQuery);
+    try {
+        const searchQuery = document.getElementById('searchInput').value.trim();
+        const activeTab = document.querySelector('.nav-link.active');
+        
+        if (!activeTab) {
+            console.error('アクティブなタブが見つかりません。');
+            return;
+        }
+        
+        const currentTab = activeTab.getAttribute('data-bs-target')?.substring(1);
+        if (currentTab) {
+            displaySongs(currentTab, searchQuery);
+        }
+    } catch (error) {
+        console.error('検索エラー:', error);
+    }
 }
 
-// 検索の遅延実行用の変数
-let searchTimeout;
-
-// YouTube検索を実行する関数
+/**
+ * YouTube検索を実行する関数
+ * @param {string} query - 検索クエリ
+ */
 async function searchYouTube(query) {
+    if (!query) return;
+    
     try {
         // YouTubeの検索URLを構築
         const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
@@ -342,13 +526,25 @@ async function searchYouTube(query) {
     }
 }
 
-// YouTube検索結果を表示する関数
+/**
+ * YouTube検索結果を表示する関数
+ * @param {string} searchUrl - 検索URL
+ * @param {string} query - 検索クエリ
+ */
 function displayYouTubeResults(searchUrl, query) {
+    if (!youtubeSearchResults) {
+        console.error('YouTube検索結果表示要素が見つかりません。');
+        return;
+    }
+    
+    const safeQuery = escapeHtml(query);
+    const safeSearchUrl = escapeHtml(searchUrl);
+    
     youtubeSearchResults.innerHTML = `
         <div class="text-center mb-3">
             <h5>曲が見つかりませんでした</h5>
-            <p>YouTubeで「${decodeURIComponent(query)}」を検索します</p>
-            <a href="${searchUrl}" target="_blank" class="btn btn-primary mb-3">
+            <p>YouTubeで「${safeQuery}」を検索します</p>
+            <a href="${safeSearchUrl}" target="_blank" class="btn btn-primary mb-3">
                 <i class="bi bi-youtube"></i> YouTubeで検索
             </a>
         </div>
@@ -356,19 +552,29 @@ function displayYouTubeResults(searchUrl, query) {
             <i class="bi bi-info-circle"></i> 検索結果から動画を選択し、URLをコピーして「曲を追加」ボタンから追加してください。
         </div>
         <div class="text-center">
-            <button class="btn btn-success" onclick="addSongFromYouTube('${query}', '')">
+            <button class="btn btn-success" id="addSongFromYouTubeBtn">
                 <i class="bi bi-plus-circle"></i> 曲を追加
             </button>
         </div>
     `;
+    
+    // イベントリスナーを追加
+    const addButton = document.getElementById('addSongFromYouTubeBtn');
+    if (addButton) {
+        addButton.addEventListener('click', () => addSongFromYouTube(query, ''));
+    }
 
     youtubeSearchModal.show();
 }
 
-// YouTubeの動画から曲を追加する関数
+/**
+ * YouTubeの動画から曲を追加する関数
+ * @param {string} query - 検索クエリ
+ * @param {string} searchUrl - 検索URL
+ */
 function addSongFromYouTube(query = '', searchUrl = '') {
     modalTitle.textContent = '曲を追加';
-    categorySelect.value = 'jpop'; // デフォルトでJ-POPに設定
+    categorySelect.value = CATEGORY.JPOP; // デフォルトでJ-POPに設定
     titleInput.value = query; // 検索クエリを曲名として設定
     artistInput.value = '';
     keySelect.value = '原調';
@@ -379,10 +585,23 @@ function addSongFromYouTube(query = '', searchUrl = '') {
     songModal.show();
 }
 
-// カスタムカテゴリのタブを作成する関数
+/**
+ * カスタムカテゴリのタブを作成する関数
+ * @param {Object} category - カテゴリオブジェクト
+ */
 function createCategoryTab(category) {
+    if (!category || !category.id || !category.name) {
+        console.error('無効なカテゴリオブジェクト:', category);
+        return;
+    }
+    
     const tabsContainer = document.getElementById('songTabs');
     const contentContainer = document.getElementById('songTabsContent');
+    
+    if (!tabsContainer || !contentContainer) {
+        console.error('タブコンテナが見つかりません。');
+        return;
+    }
 
     // タブアイテムの作成
     const tabItem = document.createElement('li');
@@ -409,10 +628,13 @@ function createCategoryTab(category) {
     deleteButton.className = 'btn-close ms-2';
     deleteButton.setAttribute('type', 'button');
     deleteButton.setAttribute('aria-label', 'カテゴリを削除');
-    deleteButton.onclick = (e) => {
+    
+    // 削除ボタンのイベントリスナー
+    deleteButton.addEventListener('click', (e) => {
         e.stopPropagation(); // タブの切り替えを防止
         deleteCustomCategory(category.id);
-    };
+    });
+    
     tabButton.appendChild(deleteButton);
     
     // タブコンテンツの作成
@@ -432,7 +654,7 @@ function createCategoryTab(category) {
     
     // お気に入りタブの後に新しいタブを挿入
     const favoritesTab = document.getElementById('favorites-tab');
-    if (favoritesTab) {
+    if (favoritesTab && favoritesTab.parentElement) {
         const favoritesTabParent = favoritesTab.parentElement;
         const nextTab = favoritesTabParent.nextElementSibling;
         if (nextTab) {
@@ -449,17 +671,29 @@ function createCategoryTab(category) {
     contentContainer.appendChild(tabContentContainer);
 }
 
-// カスタムカテゴリのセレクトオプションを追加する関数
+/**
+ * カスタムカテゴリのセレクトオプションを追加する関数
+ * @param {Object} category - カテゴリオブジェクト
+ */
 function addCategoryToSelect(category) {
+    if (!category || !category.id || !category.name || !categorySelect) {
+        console.error('無効なカテゴリまたはセレクト要素:', category);
+        return;
+    }
+    
     const option = document.createElement('option');
     option.value = category.id;
     option.textContent = category.name;
     categorySelect.appendChild(option);
 }
 
-// 新しいカテゴリを追加する関数
+/**
+ * 新しいカテゴリを追加する関数
+ * @param {string} categoryName - カテゴリ名
+ * @returns {boolean} 追加が成功したかどうか
+ */
 function addNewCategory(categoryName) {
-    if (!categoryName.trim()) {
+    if (!categoryName || !categoryName.trim()) {
         alert('カテゴリ名を入力してください。');
         return false;
     }
@@ -470,7 +704,7 @@ function addNewCategory(categoryName) {
     // 新しいカテゴリオブジェクトを作成
     const newCategory = {
         id: categoryId,
-        name: categoryName
+        name: categoryName.trim()
     };
     
     // カスタムカテゴリリストに追加
@@ -486,146 +720,214 @@ function addNewCategory(categoryName) {
     createCategoryTab(newCategory);
     
     // カテゴリリストを保存
-    saveCategoriesToStorage();
-    saveSongsToStorage();
+    Storage.saveCategories(customCategories);
+    Storage.saveSongs(songs);
     
     // 新しく追加したカテゴリを選択
-    categorySelect.value = categoryId;
+    if (categorySelect) {
+        categorySelect.value = categoryId;
+    }
     
     return true;
 }
 
-// すべてのカスタムカテゴリのタブとセレクトオプションを作成
+/**
+ * すべてのカスタムカテゴリのタブとセレクトオプションを作成
+ */
 function initializeCustomCategories() {
-    // 既存のカスタムカテゴリタブをクリア
-    document.querySelectorAll('#songTabs [data-category-id]').forEach(tab => {
-        tab.remove();
-    });
-    
-    // セレクトボックスのカスタムカテゴリオプションをクリア
-    document.querySelectorAll('#categorySelect option:not([value="jpop"]):not([value="anison"]):not([value="vocaloid"])').forEach(option => {
-        option.remove();
-    });
-    
-    // カスタムカテゴリのタブとセレクトオプションを追加
-    customCategories.forEach(category => {
-        createCategoryTab(category);
-        addCategoryToSelect(category);
+    try {
+        // 既存のカスタムカテゴリタブをクリア
+        document.querySelectorAll('#songTabs [data-category-id]').forEach(tab => {
+            tab.remove();
+        });
         
-        // songs オブジェクトにカテゴリがなければ追加
-        if (!songs[category.id]) {
-            songs[category.id] = [];
+        // セレクトボックスのカスタムカテゴリオプションをクリア
+        if (categorySelect) {
+            document.querySelectorAll(`#categorySelect option:not([value="${CATEGORY.JPOP}"]):not([value="${CATEGORY.ANISON}"]):not([value="${CATEGORY.VOCALOID}"])`).forEach(option => {
+                option.remove();
+            });
         }
+        
+        // カスタムカテゴリのタブとセレクトオプションを追加
+        customCategories.forEach(category => {
+            if (!category || !category.id) return;
+            
+            createCategoryTab(category);
+            addCategoryToSelect(category);
+            
+            // songs オブジェクトにカテゴリがなければ追加
+            if (!songs[category.id]) {
+                songs[category.id] = [];
+            }
+        });
+    } catch (error) {
+        console.error('カスタムカテゴリの初期化エラー:', error);
+    }
+}
+
+/**
+ * カスタムカテゴリを削除する関数
+ * @param {string} categoryId - カテゴリID
+ */
+function deleteCustomCategory(categoryId) {
+    if (!categoryId) return;
+    
+    if (confirm('このカテゴリを削除してもよろしいですか？\nカテゴリ内の曲もすべて削除されます。')) {
+        try {
+            // カスタムカテゴリリストから削除
+            customCategories = customCategories.filter(cat => cat && cat.id !== categoryId);
+            
+            // songs オブジェクトから削除
+            delete songs[categoryId];
+            
+            // セレクトボックスから削除
+            const option = document.querySelector(`#categorySelect option[value="${categoryId}"]`);
+            if (option) {
+                option.remove();
+            }
+            
+            // タブを削除
+            const tab = document.querySelector(`#songTabs [data-category-id="${categoryId}"]`);
+            if (tab) {
+                tab.remove();
+            }
+            
+            // タブコンテンツを削除
+            const content = document.getElementById(categoryId);
+            if (content) {
+                content.remove();
+            }
+            
+            // ローカルストレージに保存
+            Storage.saveCategories(customCategories);
+            Storage.saveSongs(songs);
+            
+            // 曲リストを更新
+            updateAllSongLists();
+        } catch (error) {
+            console.error('カテゴリ削除エラー:', error);
+            alert('カテゴリの削除中にエラーが発生しました。');
+        }
+    }
+}
+
+// 共通関数
+/**
+ * すべてのタブの曲リストを更新する
+ */
+function updateAllSongLists() {
+    displaySongs(CATEGORY.ALL);
+    displaySongs(CATEGORY.FAVORITES);
+    displaySongs(CATEGORY.JPOP);
+    displaySongs(CATEGORY.ANISON);
+    displaySongs(CATEGORY.VOCALOID);
+    customCategories.forEach(category => {
+        displaySongs(category.id);
     });
 }
 
-// カスタムカテゴリを削除する関数
-function deleteCustomCategory(categoryId) {
-    if (confirm('このカテゴリを削除してもよろしいですか？\nカテゴリ内の曲もすべて削除されます。')) {
-        // カスタムカテゴリリストから削除
-        customCategories = customCategories.filter(cat => cat.id !== categoryId);
-        
-        // songs オブジェクトから削除
-        delete songs[categoryId];
-        
-        // セレクトボックスから削除
-        const option = document.querySelector(`#categorySelect option[value="${categoryId}"]`);
-        if (option) {
-            option.remove();
-        }
-        
-        // タブを削除
-        const tab = document.querySelector(`#songTabs [data-category-id="${categoryId}"]`);
-        if (tab) {
-            tab.remove();
-        }
-        
-        // タブコンテンツを削除
-        const content = document.getElementById(categoryId);
-        if (content) {
-            content.remove();
-        }
-        
-        // ローカルストレージに保存
-        saveCategoriesToStorage();
-        saveSongsToStorage();
-        
-        // 曲リストを更新
-        displaySongs('all');
-        displaySongs('favorites');
-        displaySongs('jpop');
-        displaySongs('anison');
-        displaySongs('vocaloid');
-        customCategories.forEach(category => {
-            displaySongs(category.id);
+/**
+ * イベントリスナーを設定する関数
+ */
+function setupEventListeners() {
+    // 曲追加ボタンのイベントリスナー
+    const addSongButton = document.getElementById('addSongButton');
+    if (addSongButton) {
+        addSongButton.addEventListener('click', addSong);
+    }
+
+    // 保存ボタンのイベントリスナー
+    const saveSongButton = document.getElementById('saveSongButton');
+    if (saveSongButton) {
+        saveSongButton.addEventListener('click', saveSong);
+    }
+
+    // 検索ボタンのイベントリスナー
+    const searchButton = document.getElementById('searchButton');
+    if (searchButton) {
+        searchButton.addEventListener('click', searchSongs);
+    }
+
+    // 検索入力フィールドのEnterキーイベントリスナー
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchSongs();
+            }
+        });
+    }
+    
+    // 新しいカテゴリ追加ボタンのイベントリスナー
+    const addCategoryButton = document.getElementById('addCategoryButton');
+    const newCategoryForm = document.getElementById('newCategoryForm');
+    const newCategoryInput = document.getElementById('newCategoryInput');
+    
+    if (addCategoryButton && newCategoryForm && newCategoryInput) {
+        addCategoryButton.addEventListener('click', () => {
+            newCategoryForm.style.display = 'block';
+            addCategoryButton.style.display = 'none';
+            newCategoryInput.focus();
+        });
+    }
+    
+    // 新しいカテゴリ保存ボタンのイベントリスナー
+    const saveNewCategoryButton = document.getElementById('saveNewCategoryButton');
+    if (saveNewCategoryButton && newCategoryForm && newCategoryInput && addCategoryButton) {
+        saveNewCategoryButton.addEventListener('click', () => {
+            const categoryName = newCategoryInput.value.trim();
+            if (addNewCategory(categoryName)) {
+                newCategoryForm.style.display = 'none';
+                addCategoryButton.style.display = 'block';
+                newCategoryInput.value = '';
+            }
+        });
+    }
+    
+    // 新しいカテゴリキャンセルボタンのイベントリスナー
+    const cancelNewCategoryButton = document.getElementById('cancelNewCategoryButton');
+    if (cancelNewCategoryButton && newCategoryForm && newCategoryInput && addCategoryButton) {
+        cancelNewCategoryButton.addEventListener('click', () => {
+            newCategoryForm.style.display = 'none';
+            addCategoryButton.style.display = 'block';
+            newCategoryInput.value = '';
+        });
+    }
+    
+    // 新しいカテゴリ入力フィールドのEnterキーイベントリスナー
+    if (newCategoryInput && newCategoryForm && addCategoryButton) {
+        newCategoryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const categoryName = newCategoryInput.value.trim();
+                if (addNewCategory(categoryName)) {
+                    newCategoryForm.style.display = 'none';
+                    addCategoryButton.style.display = 'block';
+                    newCategoryInput.value = '';
+                }
+            }
         });
     }
 }
 
-// イベントリスナーの設定
-document.addEventListener('DOMContentLoaded', () => {
-    // カスタムカテゴリの初期化
-    initializeCustomCategories();
-    
-    // 各カテゴリの曲リストを表示
-    displaySongs('all');
-    displaySongs('favorites');
-    displaySongs('jpop');
-    displaySongs('anison');
-    displaySongs('vocaloid');
-    customCategories.forEach(category => {
-        displaySongs(category.id);
-    });
+/**
+ * アプリケーションの初期化関数
+ */
+function initializeApp() {
+    try {
+        // カスタムカテゴリの初期化
+        initializeCustomCategories();
+        
+        // 各カテゴリの曲リストを表示
+        updateAllSongLists();
+        
+        // イベントリスナーの設定
+        setupEventListeners();
+        
+        console.log('アプリケーションが正常に初期化されました。');
+    } catch (error) {
+        console.error('アプリケーションの初期化エラー:', error);
+    }
+}
 
-    // 曲追加ボタンのイベントリスナー
-    document.getElementById('addSongButton').addEventListener('click', addSong);
-
-    // 保存ボタンのイベントリスナー
-    document.getElementById('saveSongButton').addEventListener('click', saveSong);
-
-    // 検索ボタンのイベントリスナー
-    document.getElementById('searchButton').addEventListener('click', searchSongs);
-
-    // 検索入力フィールドのEnterキーイベントリスナー
-    document.getElementById('searchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchSongs();
-        }
-    });
-    
-    // 新しいカテゴリ追加ボタンのイベントリスナー
-    document.getElementById('addCategoryButton').addEventListener('click', () => {
-        document.getElementById('newCategoryForm').style.display = 'block';
-        document.getElementById('addCategoryButton').style.display = 'none';
-        document.getElementById('newCategoryInput').focus();
-    });
-    
-    // 新しいカテゴリ保存ボタンのイベントリスナー
-    document.getElementById('saveNewCategoryButton').addEventListener('click', () => {
-        const categoryName = document.getElementById('newCategoryInput').value.trim();
-        if (addNewCategory(categoryName)) {
-            document.getElementById('newCategoryForm').style.display = 'none';
-            document.getElementById('addCategoryButton').style.display = 'block';
-            document.getElementById('newCategoryInput').value = '';
-        }
-    });
-    
-    // 新しいカテゴリキャンセルボタンのイベントリスナー
-    document.getElementById('cancelNewCategoryButton').addEventListener('click', () => {
-        document.getElementById('newCategoryForm').style.display = 'none';
-        document.getElementById('addCategoryButton').style.display = 'block';
-        document.getElementById('newCategoryInput').value = '';
-    });
-    
-    // 新しいカテゴリ入力フィールドのEnterキーイベントリスナー
-    document.getElementById('newCategoryInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            const categoryName = document.getElementById('newCategoryInput').value.trim();
-            if (addNewCategory(categoryName)) {
-                document.getElementById('newCategoryForm').style.display = 'none';
-                document.getElementById('addCategoryButton').style.display = 'block';
-                document.getElementById('newCategoryInput').value = '';
-            }
-        }
-    });
-}); 
+// DOMが読み込まれたら初期化を実行
+document.addEventListener('DOMContentLoaded', initializeApp); 
