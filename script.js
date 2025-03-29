@@ -20,7 +20,7 @@ const Storage = {
                     [CATEGORY.JPOP]: [],
                     [CATEGORY.ANISON]: [],
                     [CATEGORY.VOCALOID]: [
-                        { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原調', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
+                        { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原曲キー', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
                     ]
                 };
             }
@@ -464,7 +464,7 @@ function editSong(category, index) {
         
         titleInput.value = song.title || '';
         artistInput.value = song.artist || '';
-        keySelect.value = song.key || '原調';
+        keySelect.value = song.key || '原曲キー';
         youtubeLinkInput.value = song.youtubeLink || '';
         
         // モーダルを表示
@@ -816,7 +816,7 @@ function addSongFromYouTube(query = '', searchUrl = '') {
     categorySelect.value = CATEGORY.JPOP; // デフォルトでJ-POPに設定
     titleInput.value = query; // 検索クエリを曲名として設定
     artistInput.value = '';
-    keySelect.value = '原調';
+    keySelect.value = '原曲キー';
     youtubeLinkInput.value = searchUrl; // YouTubeリンクを自動設定
     editIndex.value = '';
     
