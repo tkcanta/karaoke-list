@@ -13,25 +13,98 @@ const Storage = {
         localStorage.setItem('songs', JSON.stringify(data));
     },
     loadSongs() {
-        return JSON.parse(localStorage.getItem('songs')) || {
-            [CATEGORY.JPOP]: [],
-            [CATEGORY.ANISON]: [],
-            [CATEGORY.VOCALOID]: [
-                { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原調', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
-            ]
-        };
+        try {
+            const savedData = localStorage.getItem('songs');
+            if (!savedData) {
+                return {
+                    [CATEGORY.JPOP]: [],
+                    [CATEGORY.ANISON]: [],
+                    [CATEGORY.VOCALOID]: [
+                        { title: '曲名サンプル', artist: 'アーティストサンプル', key: '原調', youtubeLink: 'https://youtu.be/RpLE5A-xFZM?si=_r6XRs-4pgeMVJXw' }
+                    ]
+                };
+            }
+            
+            const parsedData = JSON.parse(savedData);
+            
+            // 必須カテゴリが存在しない場合は追加
+            if (!parsedData[CATEGORY.JPOP]) parsedData[CATEGORY.JPOP] = [];
+            if (!parsedData[CATEGORY.ANISON]) parsedData[CATEGORY.ANISON] = [];
+            if (!parsedData[CATEGORY.VOCALOID]) parsedData[CATEGORY.VOCALOID] = [];
+            
+            // 各カテゴリが配列であることを確認
+            Object.keys(parsedData).forEach(category => {
+                if (!Array.isArray(parsedData[category])) {
+                    console.warn(`カテゴリ ${category} が配列ではありません。空の配列で初期化します。`);
+                    parsedData[category] = [];
+                }
+            });
+            
+            return parsedData;
+        } catch (error) {
+            console.error('曲データの読み込みエラー:', error);
+            return {
+                [CATEGORY.JPOP]: [],
+                [CATEGORY.ANISON]: [],
+                [CATEGORY.VOCALOID]: []
+            };
+        }
     },
     saveFavorites(data) {
         localStorage.setItem('favorites', JSON.stringify(data));
     },
     loadFavorites() {
-        return JSON.parse(localStorage.getItem('favorites')) || [];
+        try {
+            const savedData = localStorage.getItem('favorites');
+            if (!savedData) return [];
+            
+            const parsedData = JSON.parse(savedData);
+            if (!Array.isArray(parsedData)) {
+                console.warn('お気に入りデータが配列ではありません。空の配列で初期化します。');
+                return [];
+            }
+            
+            // 無効なデータを除外
+            return parsedData.filter(item => item && typeof item === 'object' && item.title);
+        } catch (error) {
+            console.error('お気に入りデータの読み込みエラー:', error);
+            return [];
+        }
     },
     saveCategories(data) {
         localStorage.setItem('customCategories', JSON.stringify(data));
     },
     loadCategories() {
-        return JSON.parse(localStorage.getItem('customCategories')) || [];
+        try {
+            const savedData = localStorage.getItem('customCategories');
+            if (!savedData) return [];
+            
+            const parsedData = JSON.parse(savedData);
+            if (!Array.isArray(parsedData)) {
+                console.warn('カスタムカテゴリデータが配列ではありません。空の配列で初期化します。');
+                return [];
+            }
+            
+            // 無効なカテゴリを除外
+            return parsedData.filter(category => 
+                category && 
+                typeof category === 'object' && 
+                category.id && 
+                category.name
+            );
+        } catch (error) {
+            console.error('カスタムカテゴリデータの読み込みエラー:', error);
+            return [];
+        }
+    },
+    // ストレージをリセットする関数
+    resetStorage() {
+        if (confirm('すべてのデータをリセットしてもよろしいですか？この操作は元に戻せません。')) {
+            localStorage.removeItem('songs');
+            localStorage.removeItem('favorites');
+            localStorage.removeItem('customCategories');
+            location.reload(); // ページをリロード
+        }
     }
 };
 
@@ -538,6 +611,12 @@ async function saveSong() {
             return;
         }
 
+        // カテゴリが存在するか確認
+        if (!songs[category]) {
+            console.warn(`カテゴリが存在しません: ${category}、新しく作成します`);
+            songs[category] = [];
+        }
+
         // YouTubeリンクが入力されている場合、動画IDの形式チェック
         if (youtubeLink) {
             const videoId = getYouTubeVideoId(youtubeLink);
@@ -556,17 +635,27 @@ async function saveSong() {
 
         if (editIndexValue) {
             // 編集モード
-            const [oldCategory, index] = editIndexValue.split(',');
+            let [oldCategory, index] = editIndexValue.split(',');
             const indexNum = parseInt(index);
             
-            if (!songs[oldCategory] || isNaN(indexNum) || indexNum < 0 || indexNum >= songs[oldCategory].length) {
-                console.error(`編集する曲が見つかりません: カテゴリ=${oldCategory}, インデックス=${index}`);
-                alert('曲の更新中にエラーが発生しました。');
-                return;
+            // カテゴリが存在するか確認
+            if (!songs[oldCategory]) {
+                console.warn(`編集元のカテゴリが存在しません: ${oldCategory}、新規追加として処理します`);
+                if (!songs[category]) {
+                    songs[category] = [];
+                }
+                songs[category].push(song);
             }
-            
-            // カテゴリが変更された場合、元のカテゴリから曲を削除
-            if (oldCategory !== category) {
+            // インデックスが有効か確認
+            else if (isNaN(indexNum) || indexNum < 0 || indexNum >= songs[oldCategory].length) {
+                console.warn(`編集する曲のインデックスが無効です: ${index}、新規追加として処理します`);
+                if (!songs[category]) {
+                    songs[category] = [];
+                }
+                songs[category].push(song);
+            }
+            // カテゴリが変更された場合
+            else if (oldCategory !== category) {
                 songs[oldCategory].splice(indexNum, 1);
                 
                 // 新しいカテゴリに曲を追加
@@ -574,9 +663,16 @@ async function saveSong() {
                     songs[category] = [];
                 }
                 songs[category].push(song);
-            } else {
-                // 同じカテゴリ内での編集
+                
+                // お気に入りも更新
+                updateFavorites(song);
+            } 
+            // 同じカテゴリ内での編集
+            else {
                 songs[oldCategory][indexNum] = song;
+                
+                // お気に入りも更新
+                updateFavorites(song);
             }
         } else {
             // 新規追加モード
@@ -601,6 +697,30 @@ async function saveSong() {
     } catch (error) {
         console.error('曲の保存エラー:', error);
         alert('曲の保存中にエラーが発生しました。');
+    }
+}
+
+/**
+ * お気に入りリストを更新する関数
+ * @param {Object} updatedSong - 更新された曲情報
+ */
+function updateFavorites(updatedSong) {
+    if (!updatedSong || !updatedSong.title) return;
+    
+    try {
+        // 元のお気に入りを探す
+        const index = favorites.findIndex(fav => 
+            fav && fav.title === updatedSong.title && 
+            ((!fav.artist && !updatedSong.artist) || fav.artist === updatedSong.artist)
+        );
+        
+        // お気に入りに登録されている場合は情報を更新
+        if (index !== -1) {
+            favorites[index] = { ...updatedSong };
+            Storage.saveFavorites(favorites);
+        }
+    } catch (error) {
+        console.error('お気に入り更新エラー:', error);
     }
 }
 
@@ -935,14 +1055,20 @@ function deleteCustomCategory(categoryId) {
  * すべてのタブの曲リストを更新する
  */
 function updateAllSongLists() {
-    displaySongs(CATEGORY.ALL);
-    displaySongs(CATEGORY.FAVORITES);
-    displaySongs(CATEGORY.JPOP);
-    displaySongs(CATEGORY.ANISON);
-    displaySongs(CATEGORY.VOCALOID);
-    customCategories.forEach(category => {
-        displaySongs(category.id);
-    });
+    try {
+        displaySongs(CATEGORY.ALL);
+        displaySongs(CATEGORY.FAVORITES);
+        displaySongs(CATEGORY.JPOP);
+        displaySongs(CATEGORY.ANISON);
+        displaySongs(CATEGORY.VOCALOID);
+        customCategories.forEach(category => {
+            if (category && category.id) {
+                displaySongs(category.id);
+            }
+        });
+    } catch (error) {
+        console.error('曲リスト更新エラー:', error);
+    }
 }
 
 /**
@@ -1033,6 +1159,9 @@ function setupEventListeners() {
  */
 function initializeApp() {
     try {
+        // データを修復
+        repairInvalidData();
+        
         // カスタムカテゴリの初期化
         initializeCustomCategories();
         
@@ -1042,10 +1171,70 @@ function initializeApp() {
         // イベントリスナーの設定
         setupEventListeners();
         
+        // デバッグ用のリセットボタンを追加（開発環境のみ）
+        addDebugTools();
+        
         console.log('アプリケーションが正常に初期化されました。');
     } catch (error) {
         console.error('アプリケーションの初期化エラー:', error);
     }
+}
+
+/**
+ * データの整合性を修復する関数
+ */
+function repairInvalidData() {
+    try {
+        // 無効な曲データを修復
+        Object.keys(songs).forEach(category => {
+            if (!Array.isArray(songs[category])) {
+                console.warn(`カテゴリ ${category} が配列ではありません。空の配列に修復します。`);
+                songs[category] = [];
+                return;
+            }
+            
+            // 各カテゴリ内の無効な曲を除去
+            songs[category] = songs[category].filter(song => 
+                song && typeof song === 'object' && song.title
+            );
+        });
+        
+        // 無効なお気に入りを修復
+        favorites = favorites.filter(song => 
+            song && typeof song === 'object' && song.title
+        );
+        
+        // 修復したデータを保存
+        Storage.saveSongs(songs);
+        Storage.saveFavorites(favorites);
+        
+        console.log('データの修復が完了しました。');
+    } catch (error) {
+        console.error('データ修復エラー:', error);
+    }
+}
+
+/**
+ * デバッグツールを追加する関数
+ */
+function addDebugTools() {
+    // デバッグツールのコンテナを作成
+    const debugToolsContainer = document.createElement('div');
+    debugToolsContainer.className = 'debug-tools';
+    debugToolsContainer.style.position = 'fixed';
+    debugToolsContainer.style.bottom = '80px';
+    debugToolsContainer.style.right = '20px';
+    debugToolsContainer.style.zIndex = '1000';
+    
+    // リセットボタンを作成
+    const resetButton = document.createElement('button');
+    resetButton.className = 'btn btn-danger btn-sm';
+    resetButton.innerHTML = '<i class="bi bi-trash"></i> リセット';
+    resetButton.title = 'すべてのデータをリセット';
+    resetButton.addEventListener('click', Storage.resetStorage);
+    
+    debugToolsContainer.appendChild(resetButton);
+    document.body.appendChild(debugToolsContainer);
 }
 
 // DOMが読み込まれたら初期化を実行
